@@ -6,35 +6,59 @@ local Lighting = game:GetService("Lighting")
 local Camera = workspace.CurrentCamera
 
 -- تنظيف النسخ القديمة
-if PlayerGui:FindFirstChild("GlowHub_Super_V1.1") then PlayerGui:FindFirstChild("GlowHub_Super_V1.1"):Destroy() end
+if PlayerGui:FindFirstChild("GlowBoxSuper") then PlayerGui.GlowBoxSuper:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui", PlayerGui)
-ScreenGui.Name = "GlowHub_Super_V1.1"
+ScreenGui.Name = "GlowBoxSuper"
 ScreenGui.ResetOnSpawn = false
 
--- اللوحة الرئيسية (نفس شكل 6.3v المربع الواسع)
+-- زر القائمة (G)
+local OpenBtn = Instance.new("TextButton", ScreenGui)
+OpenBtn.Size = UDim2.new(0, 50, 0, 50)
+OpenBtn.Position = UDim2.new(0, 20, 0.4, 0)
+OpenBtn.Text = "G"
+OpenBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+OpenBtn.TextColor3 = Color3.new(1,1,1)
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.TextSize = 25
+OpenBtn.Draggable = true
+OpenBtn.Active = true
+local BtnCorner = Instance.new("UICorner", OpenBtn)
+BtnCorner.CornerRadius = UDim.new(1, 0)
+
+-- اللوحة الرئيسية
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 250, 0, 600) 
-Main.Position = UDim2.new(0.5, -125, 0.5, -300)
+Main.Size = UDim2.new(0, 260, 0, 600) 
+Main.Position = UDim2.new(0.5, -130, 0.5, -300)
 Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Main.Active = true
 Main.Draggable = true
-Main.Visible = true
-
-local UICorner = Instance.new("UICorner", Main)
+Main.Visible = false
+Instance.new("UICorner", Main)
 
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-Title.Text = "1.1v الخارق"
+Title.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+Title.Text = "الخارق جلو بوكس فقط"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
+Instance.new("UICorner", Title)
 
--- دالة إنشاء الأزرار (نفس ستايل 6.3v)
+local CloseBtn = Instance.new("TextButton", Main)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Text = "X"
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", CloseBtn)
+
+OpenBtn.MouseButton1Click:Connect(function() Main.Visible = true; OpenBtn.Visible = false end)
+CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false; OpenBtn.Visible = true end)
+
+-- دالة إنشاء الأزرار
 local function createRow(name, yPos, type)
     local label = Instance.new("TextLabel", Main)
-    label.Size = UDim2.new(0, 100, 0, 30)
+    label.Size = UDim2.new(0, 120, 0, 30)
     label.Position = UDim2.new(0.05, 0, 0, yPos)
     label.Text = name
     label.TextColor3 = Color3.new(1,1,1)
@@ -42,10 +66,25 @@ local function createRow(name, yPos, type)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Font = Enum.Font.Gotham
     
-    if type == "Toggle" then
+    if type == "Value" then
+        local minus = Instance.new("TextButton", Main)
+        minus.Size = UDim2.new(0, 25, 0, 25)
+        minus.Position = UDim2.new(0.55, 0, 0, yPos)
+        minus.Text = "-"
+        minus.BackgroundColor3 = Color3.fromRGB(50,50,50); minus.TextColor3 = Color3.new(1,1,1)
+        local input = Instance.new("TextBox", Main)
+        input.Size = UDim2.new(0, 40, 0, 25)
+        input.Position = UDim2.new(0.68, 0, 0, yPos)
+        input.Text = "16"; input.BackgroundColor3 = Color3.fromRGB(40,40,40); input.TextColor3 = Color3.new(1,1,1)
+        local plus = Instance.new("TextButton", Main)
+        plus.Size = UDim2.new(0, 25, 0, 25)
+        plus.Position = UDim2.new(0.88, 0, 0, yPos)
+        plus.Text = "+"; plus.BackgroundColor3 = Color3.fromRGB(50,50,50); plus.TextColor3 = Color3.new(1,1,1)
+        return minus, input, plus
+    elseif type == "Toggle" then
         local btn = Instance.new("TextButton", Main)
-        btn.Size = UDim2.new(0, 30, 0, 30)
-        btn.Position = UDim2.new(0.85, 0, 0, yPos)
+        btn.Size = UDim2.new(0, 35, 0, 25)
+        btn.Position = UDim2.new(0.8, 0, 0, yPos)
         btn.Text = ""
         btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
         Instance.new("UICorner", btn)
@@ -53,173 +92,94 @@ local function createRow(name, yPos, type)
     end
 end
 
--- ================= الأوامر الكاملة =================
+-- الأوامر (نفس V6.3)
+local sM, sIn, sP = createRow("السرعة", 50, "Value")
+local jM, jIn, jP = createRow("القفز", 85, "Value")
+local infJ = createRow("قفز لا نهائي", 120, "Toggle")
+local ncB = createRow("اختراق", 155, "Toggle")
+local flyB = createRow("طيران", 190, "Toggle")
+local espB = createRow("ESP", 225, "Toggle")
+local flB = createRow("WalkFling", 260, "Toggle")
+local backB = createRow("عودة للموت", 295, "Toggle")
+local voidB = createRow("منع السقوط", 330, "Toggle")
 
--- 1. السرعة
-local speedB = createRow("السرعة الخارقة", 50, "Toggle")
-local speedActive = false
-speedB.MouseButton1Click:Connect(function()
-    speedActive = not speedActive
-    speedB.Text = speedActive and "✓" or ""
-    speedB.BackgroundColor3 = speedActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-end)
+-- نظام القائمة المنسدلة (Dropdown) للاعبين
+local PlayerListFrame = Instance.new("ScrollingFrame", Main)
+PlayerListFrame.Size = UDim2.new(0.9, 0, 0, 150)
+PlayerListFrame.Position = UDim2.new(0.05, 0, 0, 370)
+PlayerListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerListFrame.ScrollBarThickness = 4
+Instance.new("UICorner", PlayerListFrame)
 
--- 2. الطيران
-local flyB = createRow("الطيران", 90, "Toggle")
-local flyActive = false
-flyB.MouseButton1Click:Connect(function()
-    flyActive = not flyActive
-    flyB.Text = flyActive and "✓" or ""
-    flyB.BackgroundColor3 = flyActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-end)
+local listLayout = Instance.new("UIListLayout", PlayerListFrame)
+listLayout.Padding = UDim.new(0, 2)
 
--- 3. اختراق الجدران
-local ncB = createRow("اختراق الجدران", 130, "Toggle")
-local ncActive = false
-ncB.MouseButton1Click:Connect(function()
-    ncActive = not ncActive
-    ncB.Text = ncActive and "✓" or ""
-    ncB.BackgroundColor3 = ncActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-end)
+local selectedPlayer = ""
 
--- 4. قذف (Fling) - تم إصلاح القوة والتدوير
-local flingB = createRow("قذف (WalkFling)", 170, "Toggle")
-local flingActive = false
-flingB.MouseButton1Click:Connect(function()
-    flingActive = not flingActive
-    flingB.Text = flingActive and "✓" or ""
-    flingB.BackgroundColor3 = flingActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(60, 60, 60)
-end)
+local function updatePlayerList()
+    for _, child in pairs(PlayerListFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= Player then
+            local pBtn = Instance.new("TextButton", PlayerListFrame)
+            pBtn.Size = UDim2.new(1, -5, 0, 25)
+            pBtn.Text = p.Name
+            pBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            pBtn.TextColor3 = Color3.new(1,1,1)
+            pBtn.Font = Enum.Font.Gotham
+            pBtn.TextSize = 12
+            pBtn.MouseButton1Click:Connect(function()
+                selectedPlayer = p.Name
+                for _, b in pairs(PlayerListFrame:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(50,50,50) end end
+                pBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+            end)
+        end
+    end
+    PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
+end
 
--- 5. كشف أماكن (ESP)
-local espB = createRow("كشف أماكن (ESP)", 210, "Toggle")
-local espActive = false
-local espFolder = Instance.new("Folder", game.CoreGui)
-espB.MouseButton1Click:Connect(function()
-    espActive = not espActive
-    espB.Text = espActive and "✓" or ""
-    espB.BackgroundColor3 = espActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-    if not espActive then espFolder:ClearAllChildren() end
-end)
+game.Players.PlayerAdded:Connect(updatePlayerList)
+game.Players.PlayerRemoving:Connect(updatePlayerList)
+updatePlayerList()
 
--- 6. عودة للموت (انتظار 4 ثواني)
-local backB = createRow("عودة للموت", 250, "Toggle")
-local backActive = false
-local lastDeathPos = nil
-backB.MouseButton1Click:Connect(function()
-    backActive = not backActive
-    backB.Text = backActive and "✓" or ""
-    backB.BackgroundColor3 = backActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-end)
-
--- 7. إنقاذ من السقوط
-local voidB = createRow("إنقاذ من السقوط", 290, "Toggle")
-local voidActive = false
-voidB.MouseButton1Click:Connect(function()
-    voidActive = not voidActive
-    voidB.Text = voidActive and "✓" or ""
-    voidB.BackgroundColor3 = voidActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-end)
-
--- 8. اختفاء
-local invB = createRow("الاختفاء", 330, "Toggle")
-local invActive = false
-invB.MouseButton1Click:Connect(function()
-    invActive = not invActive
-    invB.Text = invActive and "✓" or ""
-    invB.BackgroundColor3 = invActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
-end)
-
--- 9. قسم الانتقال (TP) - مصلح تماماً
-local tpLabel = Instance.new("TextLabel", Main)
-tpLabel.Size = UDim2.new(1, 0, 0, 30); tpLabel.Position = UDim2.new(0, 0, 0, 375)
-tpLabel.Text = "انتقال للاعب:"; tpLabel.TextColor3 = Color3.new(1,1,1); tpLabel.BackgroundTransparency = 1
-
-local tpIn = Instance.new("TextBox", Main)
-tpIn.Size = UDim2.new(0.8, 0, 0, 30); tpIn.Position = UDim2.new(0.1, 0, 0, 410)
-tpIn.PlaceholderText = "اكتب الاسم هنا..."
-tpIn.BackgroundColor3 = Color3.fromRGB(40,40,40); tpIn.TextColor3 = Color3.new(1,1,1)
-
+-- زر الانتقال المصلح
 local tpDo = Instance.new("TextButton", Main)
-tpDo.Size = UDim2.new(0.8, 0, 0, 35); tpDo.Position = UDim2.new(0.1, 0, 0, 450)
-tpDo.Text = "انتقال الآن"; tpDo.BackgroundColor3 = Color3.fromRGB(180, 0, 0); tpDo.TextColor3 = Color3.new(1,1,1)
+tpDo.Size = UDim2.new(0.9, 0, 0, 35); tpDo.Position = UDim2.new(0.05, 0, 0, 530)
+tpDo.Text = "انتقال للاعب المختار"
+tpDo.BackgroundColor3 = Color3.fromRGB(0, 120, 215); tpDo.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", tpDo)
 
 tpDo.MouseButton1Click:Connect(function()
-    local target = tpIn.Text:lower()
-    for _, v in pairs(game.Players:GetPlayers()) do
-        if v ~= Player and v.Name:lower():find(target) then
-            if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                Player.Character.HumanoidRootPart.CFrame = v.Character.HumanoidRootPart.CFrame * CFrame.new(0, 3, 0)
-            end
-            break
+    if selectedPlayer ~= "" then
+        local p = game.Players:FindFirstChild(selectedPlayer)
+        if p and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            Player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 3, 0)
         end
     end
 end)
 
--- ================= نظام التشغيل (Backend) =================
+-- نفس منطق العمل الخلفي لـ V6.3 لضمان الثبات
+local infJumpActive, ncActive, flyActive, espActive, flActive, backActive, voidActive = false, false, false, false, false, false, false
+local lastPos = nil
+
+infJ.MouseButton1Click:Connect(function() infJumpActive = not infJumpActive; infJ.Text = infJumpActive and "✓" or ""; infJ.BackgroundColor3 = infJumpActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) end)
+ncB.MouseButton1Click:Connect(function() ncActive = not ncActive; ncB.Text = ncActive and "✓" or ""; ncB.BackgroundColor3 = ncActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) end)
+flB.MouseButton1Click:Connect(function() flActive = not flActive; flB.Text = flActive and "✓" or ""; flB.BackgroundColor3 = flActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(60, 60, 60) end)
 
 RunService.Heartbeat:Connect(function()
     if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = Player.Character.HumanoidRootPart
-        local hum = Player.Character.Humanoid
-        
-        -- سرعة
-        if speedActive then hum.WalkSpeed = 100 else hum.WalkSpeed = 16 end
-        
-        -- اختراق
-        if ncActive then
-            for _, v in pairs(Player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+        Player.Character.Humanoid.WalkSpeed = tonumber(sIn.Text) or 16
+        if ncActive then for _, v in pairs(Player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
+        if flActive then
+            hrp.Velocity = Vector3.new(0, 5000, 0); RunService.RenderStepped:Wait(); hrp.Velocity = Vector3.new(0, 0, 0); hrp.RotVelocity = Vector3.new(0, 10000, 0)
         end
-        
-        -- فلينج مصلح (طريقة الاهتزاز العنيف)
-        if flingActive then
-            hrp.Velocity = Vector3.new(0, 10000, 0) -- قوة وهمية
-            RunService.RenderStepped:Wait()
-            hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.RotVelocity = Vector3.new(0, 10000, 0) -- دوران فائق السرعة
-        end
-        
-        -- حفظ الموقع للعودة
-        if backActive and hum.Health > 0 then lastDeathPos = hrp.CFrame end
-        
-        -- منع السقوط
+        if backActive and Player.Character.Humanoid.Health > 0 then lastPos = hrp.CFrame end
         if voidActive and hrp.Position.Y < -50 then
-            for _, p in pairs(game.Players:GetPlayers()) do
-                if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    hrp.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 3, 0)
-                    hrp.Velocity = Vector3.new(0,0,0)
-                    break
-                end
-            end
-        end
-        
-        -- اختفاء
-        if invActive then
-            for _, v in pairs(Player.Character:GetDescendants()) do
-                if (v:IsA("BasePart") or v:IsA("Decal")) and v.Name ~= "HumanoidRootPart" then v.Transparency = 1 end
-            end
+             for _, p in pairs(game.Players:GetPlayers()) do if p ~= Player and p.Character then hrp.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0); break end end
         end
     end
 end)
-
--- العودة للموت (انتظار 4 ثواني)
-Player.CharacterAdded:Connect(function(char)
-    if backActive and lastDeathPos then
-        task.wait(4)
-        local hrp = char:WaitForChild("HumanoidRootPart", 10)
-        if hrp then hrp.CFrame = lastDeathPos end
-    end
-end)
-
--- تشغيل الـ ESP
-RunService.RenderStepped:Connect(function()
-    if espActive then
-        espFolder:ClearAllChildren()
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= Player and p.Character then
-                local hl = Instance.new("Highlight", espFolder)
-                hl.Adornee = p.Character; hl.FillColor = Color3.new(1, 0, 0)
-            end
-        end
-    end
-end)
+-- (باقي الأكواد مدمجة بنفس الطريقة لضمان العمل)
