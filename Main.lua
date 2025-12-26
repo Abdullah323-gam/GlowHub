@@ -1,136 +1,248 @@
--- GlowHub V4.2 FINAL FIX
+--[[
+    GlowHub V6 - النسخة العربية المحدثة
+    تم إصلاح: نظام اختيار اللاعبين، التعريب، وربط الأزرار
+]]
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- // حذف النسخ القديمة لضمان عدم التعليق //
-if game.CoreGui:FindFirstChild("GlowHubV4_Fixed") then game.CoreGui.GlowHubV4_Fixed:Destroy() end
+-- // الإعدادات //
+local COLORS = {
+    Background = Color3.fromRGB(20, 20, 20),
+    Accent = Color3.fromRGB(0, 120, 215),
+    Text = Color3.fromRGB(255, 255, 255),
+    Success = Color3.fromRGB(0, 255, 120),
+    Idle = Color3.fromRGB(100, 100, 100)
+}
 
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "GlowHubV4_Fixed"
+local Toggles = { Fly = false, Noclip = false, InfJump = false, Speed = false, AutoBack = false }
+local Values = { Speed = 16, SelectedPlayer = nil, SavedPos = nil }
 
--- [ الواجهة - تم تصغيرها وجعلها أكثر استقراراً ]
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 230, 0, 380)
-Main.Position = UDim2.new(0.5, -115, 1.2, 0)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Instance.new("UICorner", Main)
+-- // إنشاء الواجهة //
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GlowHub_Arabic"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer.PlayerGui end
 
-local TopBar = Instance.new("Frame", Main)
-TopBar.Size = UDim2.new(1, 0, 0, 35)
-TopBar.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-Instance.new("UICorner", TopBar)
+-- اللوحة الرئيسية
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -210)
+MainFrame.BackgroundColor3 = COLORS.Background
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
-local Title = Instance.new("TextLabel", TopBar)
-Title.Text = "GLOWBOX ULTIMATE FIX"; Title.Size = UDim2.new(1,0,1,0); Title.TextColor3 = Color3.new(1,1,1); Title.BackgroundTransparency = 1; Title.Font = "GothamBold"
+-- الشريط العلوي
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = COLORS.Accent
+TopBar.Parent = MainFrame
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
 
--- [ زر G المتحرك ]
-local GBtn = Instance.new("TextButton", ScreenGui)
-GBtn.Size = UDim2.new(0, 45, 0, 45); GBtn.Position = UDim2.new(0, 20, 0.5, 0); GBtn.Text = "G"
-GBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215); GBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", GBtn).CornerRadius = UDim.new(1,0)
-GBtn.Draggable = true
+local Title = Instance.new("TextLabel")
+Title.Text = "جلو هوب V6"
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = COLORS.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.Parent = TopBar
 
--- [ نظام الفتح والإغلاق الذكي ]
-local isOpen = false
-local function toggle()
-    isOpen = not isOpen
-    Main:TweenPosition(isOpen and UDim2.new(0.5, -115, 0.5, -190) or UDim2.new(0.5, -115, 1.2, 0), "Out", "Quart", 0.4, true)
-end
-GBtn.MouseButton1Click:Connect(toggle)
+-- قائمة التمرير
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -10, 1, -50)
+Scroll.Position = UDim2.new(0, 5, 0, 45)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 2
+Scroll.Parent = MainFrame
+local Layout = Instance.new("UIListLayout", Scroll)
+Layout.Padding = UDim.new(0, 5)
 
--- [ نظام الأوامر المصلح ]
-local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, 0, 1, -40); Scroll.Position = UDim2.new(0,0,0,40); Scroll.BackgroundTransparency = 1; Scroll.CanvasSize = UDim2.new(0,0,0,700)
-
-local function createBtn(txt, callback)
-    local b = Instance.new("TextButton", Scroll)
-    b.Size = UDim2.new(0.9, 0, 0, 35); b.Text = txt; b.BackgroundColor3 = Color3.fromRGB(40,40,40); b.TextColor3 = Color3.new(1,1,1); b.Font = "Gotham"
-    local c = Instance.new("UICorner", b)
-    local active = false
-    b.MouseButton1Click:Connect(function()
-        active = not active
-        b.BackgroundColor3 = active and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40,40,40)
-        callback(active)
+-- // وظائف مساعدة //
+local function createToggle(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -10, 0, 35)
+    Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Btn.Text = "  " .. text
+    Btn.TextColor3 = COLORS.Text
+    Btn.Font = Enum.Font.GothamSemibold
+    Btn.TextSize = 14
+    Btn.TextXAlignment = Enum.TextXAlignment.Right
+    Btn.Parent = Scroll
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    
+    local Indicator = Instance.new("Frame")
+    Indicator.Size = UDim2.new(0, 10, 0, 10)
+    Indicator.Position = UDim2.new(0.05, 0, 0.5, -5)
+    Indicator.BackgroundColor3 = COLORS.Idle
+    Indicator.Parent = Btn
+    Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+    
+    local state = false
+    Btn.MouseButton1Click:Connect(function()
+        state = not state
+        Indicator.BackgroundColor3 = state and COLORS.Success or COLORS.Idle
+        callback(state)
     end)
-    return b
 end
 
--- 1. إصلاح السرعة والقفز (الطريقة المباشرة)
-local speed = 16
-createBtn("تفعيل السرعة القوية", function(state)
-    _G.Speed = state
-    while _G.Speed do task.wait()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = speed
+-- // قائمة اختيار اللاعبين (الحقيقية) //
+local DropdownFrame = Instance.new("Frame")
+DropdownFrame.Size = UDim2.new(1, -10, 0, 40)
+DropdownFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+DropdownFrame.Parent = Scroll
+Instance.new("UICorner", DropdownFrame)
+
+local SelectedLabel = Instance.new("TextButton")
+SelectedLabel.Size = UDim2.new(1, 0, 1, 0)
+SelectedLabel.Text = "اختر لاعب من هنا"
+SelectedLabel.TextColor3 = COLORS.Text
+SelectedLabel.BackgroundTransparency = 1
+SelectedLabel.Parent = DropdownFrame
+
+local PlayerListFrame = Instance.new("ScrollingFrame")
+PlayerListFrame.Size = UDim2.new(1, 0, 0, 120)
+PlayerListFrame.Position = UDim2.new(0, 0, 1, 5)
+PlayerListFrame.Visible = false
+PlayerListFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+PlayerListFrame.ZIndex = 5
+PlayerListFrame.Parent = DropdownFrame
+Instance.new("UIListLayout", PlayerListFrame)
+
+local function updatePlayers()
+    for _, v in pairs(PlayerListFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, 0, 0, 30)
+            pBtn.Text = plr.Name
+            pBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+            pBtn.TextColor3 = COLORS.Text
+            pBtn.ZIndex = 6
+            pBtn.Parent = PlayerListFrame
+            pBtn.MouseButton1Click:Connect(function()
+                Values.SelectedPlayer = plr
+                SelectedLabel.Text = "المختار: " .. plr.Name
+                PlayerListFrame.Visible = false
+            end)
+        end
+    end
+end
+
+SelectedLabel.MouseButton1Click:Connect(function()
+    PlayerListFrame.Visible = not PlayerListFrame.Visible
+    updatePlayers()
+end)
+
+-- // الأوامر الأساسية //
+
+createToggle("طيران (CFrame)", function(s)
+    Toggles.Fly = s
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if root then root.Anchored = s end
+end)
+
+createToggle("اختراق الجدران", function(s) Toggles.Noclip = s end)
+createToggle("قفز لا نهائي", function(s) Toggles.InfJump = s end)
+createToggle("الرجوع بعد الموت", function(s) Toggles.AutoBack = s end)
+
+-- زر الانتقال (Teleport)
+local TPBtn = Instance.new("TextButton")
+TPBtn.Size = UDim2.new(1, -10, 0, 35)
+TPBtn.BackgroundColor3 = COLORS.Accent
+TPBtn.Text = "انتقال إلى اللاعب المختار"
+TPBtn.TextColor3 = COLORS.Text
+TPBtn.Parent = Scroll
+Instance.new("UICorner", TPBtn)
+
+TPBtn.MouseButton1Click:Connect(function()
+    if Values.SelectedPlayer and Values.SelectedPlayer.Character then
+        local targetPos = Values.SelectedPlayer.Character:GetPivot()
+        LocalPlayer.Character:PivotTo(targetPos)
+    end
+end)
+
+-- زر نسخ الملابس (Skin Copy)
+local SkinBtn = Instance.new("TextButton")
+SkinBtn.Size = UDim2.new(1, -10, 0, 35)
+SkinBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 200)
+SkinBtn.Text = "نسخ ملابس اللاعب"
+SkinBtn.TextColor3 = COLORS.Text
+SkinBtn.Parent = Scroll
+Instance.new("UICorner", SkinBtn)
+
+SkinBtn.MouseButton1Click:Connect(function()
+    if Values.SelectedPlayer and LocalPlayer.Character then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            local desc = Players:GetHumanoidDescriptionFromUserId(Values.SelectedPlayer.UserId)
+            hum:ApplyDescription(desc)
         end
     end
 end)
 
--- 2. إصلاح الطيران (استخدام LinearVelocity - الأحدث في 2025)
-createBtn("طيران مصلح (V-Fly)", function(state)
-    _G.Fly = state
+-- // الأنظمة الخلفية //
+
+-- حلقة الطيران والجدران
+RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
-    if state and char then
-        local root = char:FindFirstChild("HumanoidRootPart")
-        local vel = Instance.new("LinearVelocity", root)
-        local att = Instance.new("Attachment", root)
-        vel.Attachment0 = att
-        vel.MaxForce = math.huge
-        task.spawn(function()
-            while _G.Fly do RunService.RenderStepped:Wait()
-                vel.VectorVelocity = Camera.CFrame.LookVector * 100
-                if not _G.Fly then break end
-            end
-            vel:Destroy(); att:Destroy()
-        end)
+    if not char then return end
+    
+    -- الطيران
+    if Toggles.Fly and char:FindFirstChild("HumanoidRootPart") then
+        local root = char.HumanoidRootPart
+        local moveDir = Vector3.new()
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= Camera.CFrame.LookVector end
+        root.CFrame = root.CFrame + (moveDir * 1.5)
+    end
+    
+    -- اختراق الجدران
+    if Toggles.Noclip then
+        for _, p in pairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
     end
 end)
 
--- 3. إصلاح فسخ وقت الأدوات (Fast Tools)
-createBtn("فسخ وقت الأدوات", function(state)
-    _G.FastWait = state
-    RunService.Heartbeat:Connect(function()
-        if _G.FastWait and LocalPlayer.Character then
-            for _, v in pairs(LocalPlayer.Character:GetChildren()) do
-                if v:IsA("Tool") then v.ToolTip = "" -- كسر الحماية البسيطة
-                    if v:FindFirstChild("Activated") then v:Activate() end
-                end
-            end
-        end
+-- قفز لا نهائي
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfJump and LocalPlayer.Character then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
+end)
+
+-- نظام الرجوع بعد الموت
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if Toggles.AutoBack and Values.SavedPos then
+        task.wait(1)
+        char:PivotTo(Values.SavedPos)
+        Values.SavedPos = nil
+    end
+    char:WaitForChild("Humanoid").Died:Connect(function()
+        if Toggles.AutoBack then Values.SavedPos = char:GetPivot() end
     end)
 end)
 
--- 4. إصلاح نسخ السكن (Visual Only)
-local selectedPlr = ""
-createBtn("نسخ شكل اللاعب المختار", function()
-    local p = Players:FindFirstChild(selectedPlr)
-    if p and LocalPlayer.Character then
-        for _, v in pairs(LocalPlayer.Character:GetChildren()) do
-            if v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") then v:Destroy() end
-        end
-        for _, v in pairs(p.Character:GetChildren()) do
-            if v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") then
-                v:Clone().Parent = LocalPlayer.Character
-            end
-        end
-    end
+-- الزر العائم (G)
+local GBtn = Instance.new("TextButton")
+GBtn.Size = UDim2.new(0, 45, 0, 45)
+GBtn.Position = UDim2.new(0.05, 0, 0.1, 0)
+GBtn.BackgroundColor3 = COLORS.Accent
+GBtn.Text = "G"
+GBtn.TextColor3 = COLORS.Text
+GBtn.Parent = ScreenGui
+Instance.new("UICorner", GBtn).CornerRadius = UDim.new(1, 0)
+
+GBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
--- [ قائمة اللاعبين المحدثة ]
-local PScroll = Instance.new("ScrollingFrame", Scroll)
-PScroll.Size = UDim2.new(0.9,0,0,100); PScroll.BackgroundColor3 = Color3.fromRGB(30,30,30)
-Instance.new("UIListLayout", PScroll)
-
-local function refresh()
-    for _, v in pairs(PScroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            local b = Instance.new("TextButton", PScroll)
-            b.Size = UDim2.new(1,0,0,25); b.Text = p.Name
-            b.MouseButton1Click:Connect(function() selectedPlr = p.Name; b.BackgroundColor3 = Color3.fromRGB(0,120,215) end)
-        end
-    end
-end
-refresh()
+print("تم تشغيل جلو هوب العربي بنجاح!")
