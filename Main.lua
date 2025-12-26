@@ -322,3 +322,61 @@ tpBtn.MouseButton1Click:Connect(function()
         end
     end
 end)
+local backB = createRow("Back On Death", 0.85, "Toggle")
+local backActive = false
+local lastDeathPos = nil
+
+backB.MouseButton1Click:Connect(function()
+    backActive = not backActive
+    backB.Text = backActive and "✓" or ""
+    backB.BackgroundColor3 = backActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+Player.CharacterAdded:Connect(function(char)
+    if backActive and lastDeathPos then
+        local root = char:WaitForChild("HumanoidRootPart", 5)
+        if root then
+            task.wait(0.6)
+            root.CFrame = lastDeathPos
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if backActive and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+        local hum = Player.Character:FindFirstChild("Humanoid")
+        if hum and hum.Health > 0 then
+            lastDeathPos = Player.Character.HumanoidRootPart.CFrame
+        end
+    end
+end)
+
+local invB = createRow("Invisibility", 0.93, "Toggle")
+local invActive = false
+
+local function applyInvisibility(char, isHidden)
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            if part.Name ~= "HumanoidRootPart" then
+                part.Transparency = isHidden and 1 or 0
+            end
+        end
+    end
+end
+
+invB.MouseButton1Click:Connect(function()
+    invActive = not invActive
+    invB.Text = invActive and "✓" or ""
+    invB.BackgroundColor3 = invActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+    if Player.Character then
+        applyInvisibility(Player.Character, invActive)
+    end
+end)
+
+Player.CharacterAdded:Connect(function(char)
+    if invActive then
+        task.wait(0.5)
+        applyInvisibility(char, true)
+    end
+end)
+
